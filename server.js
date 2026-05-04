@@ -1,302 +1,148 @@
 const express = require('express');
 const path = require('path');
-const fs = require('fs');
 const multer = require('multer');
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ckjbzzccfinnfqajdszp.supabase.co';
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFpbWFwZmtseW92dHJ2dGhtZWdvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4NzAwNjcsImV4cCI6MjA5MzQ0NjA2N30.Fnjzp2N4hJVrOCr0XHBVxoMi05IPeN7flLDrehJyr9w';
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const BUCKET = 'photos';
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
-  if (req.method === 'OPTIONS') return res.sendStatus(200);
-  next();
+ res.header('Access-Control-Allow-Origin', '*');
+ res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+ res.header('Access-Control-Allow-Headers', 'Content-Type');
+ if (req.method === 'OPTIONS') return res.sendStatus(200);
+ next();
 });
 
-// File upload config
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = path.join(__dirname, 'public', 'uploads');
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
-  },
-  filename: (req, file, cb) => {
-    let ext = path.extname(file.originalname).toLowerCase();
-    if (!ext || !['.jpg','.jpeg','.png','.gif','.webp'].includes(ext)) ext = '.jpg';
-    cb(null, Date.now() + '-' + Math.random().toString(36).slice(2, 8) + ext);
-  }
-});
 const upload = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    if (allowedMimes.includes(file.mimetype) || file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('只支持 jpg/png/gif/webp 格式图片'));
-    }
-  }
+ storage: multer.memoryStorage(),
+ limits: { fileSize: 10 * 1024 * 1024 },
+ fileFilter: (req, file, cb) => {
+ if (file.mimetype.startsWith('image/')) cb(null, true);
+ else cb(new Error('只支持图片格式'));
+ }
 });
 
-// Multer error handler
 app.use((err, req, res, next) => {
-  if (err instanceof require('multer').MulterError || err.message.includes('格式')) {
-    return res.status(400).json({ error: err.message });
-  }
-  next(err);
+ if (err instanceof multer.MulterError || err.message.includes('图片')) return res.status(400).json({ error: err.message });
+ next(err);
 });
 
-// Data helpers
-const DATA_DIR = path.join(__dirname, 'data');
-// Ensure data directories exist on startup
-['.', 'years', 'pets', 'anniversary'].forEach(sub => {
-  const dir = path.join(DATA_DIR, sub);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-});
-function readJSON(file) {
-  const fp = path.join(DATA_DIR, file);
-  try { return JSON.parse(fs.readFileSync(fp, 'utf8')); }
-  catch { return (file === 'blessings.json' || file === 'pending.json') ? [] : {}; }
-}
-function writeJSON(file, data) {
-  const fp = path.join(DATA_DIR, file);
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(fp, JSON.stringify(data, null, 2), 'utf8');
-}
-function readYearData(age) {
-  const fp = path.join(DATA_DIR, 'years', age + '.json');
-  try { return JSON.parse(fs.readFileSync(fp, 'utf8')); }
-  catch { return { cover: null, photos: [], stories: [] }; }
-}
-function writeYearData(age, data) {
-  const dir = path.join(DATA_DIR, 'years');
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, age + '.json'), JSON.stringify(data, null, 2), 'utf8');
-}
-function readPetData() {
-  try { return JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'pets', 'photos.json'), 'utf8')); }
-  catch { return {}; }
-}
-function writePetData(data) {
-  const dir = path.join(DATA_DIR, 'pets');
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, 'photos.json'), JSON.stringify(data, null, 2), 'utf8');
+async function uploadToStorage(file) {
+ const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+ const name = Date.now() + '-' + Math.random().toString(36).slice(2, 8) + ext;
+ const { error } = await supabase.storage.from(BUCKET).upload(name, file.buffer, { contentType: file.mimetype, upsert: true });
+ if (error) throw error;
+ return supabase.storage.from(BUCKET).getPublicUrl(name).data.publicUrl;
 }
 
-// ===== Blessings API =====
-app.get('/api/blessings', (req, res) => {
-  res.json(readJSON('blessings.json'));
+app.get('/health', (req, res) => res.json({ status: 'ok' }));
+
+app.get('/api/blessings', async (req, res) => {
+ const { data, error } = await supabase.from('blessings').select('*').order('created_at', { ascending: true });
+ res.json(error ? [] : data.map(r => ({ id: r.id, name: r.name, message: r.message, time: r.created_at })));
 });
-app.post('/api/blessings', (req, res) => {
-  const { name, message } = req.body;
-  if (!name || !message) return res.status(400).json({ error: 'name and message required' });
-  const list = readJSON('blessings.json');
-  const item = { id: Date.now(), name, message, time: new Date().toISOString() };
-  list.push(item);
-  writeJSON('blessings.json', list);
-  res.json(item);
+app.post('/api/blessings', async (req, res) => {
+ const { name, message } = req.body;
+ if (!name || !message) return res.status(400).json({ error: 'name and message required' });
+ const { data, error } = await supabase.from('blessings').insert({ name, message }).select().single();
+ res.json(error ? { error: error.message } : { id: data.id, name: data.name, message: data.message, time: data.created_at });
 });
-app.delete('/api/blessings/:id', (req, res) => {
-  let list = readJSON('blessings.json');
-  list = list.filter(b => b.id != req.params.id);
-  writeJSON('blessings.json', list);
-  res.json({ ok: true });
+app.delete('/api/blessings/:id', async (req, res) => {
+ await supabase.from('blessings').delete().eq('id', req.params.id);
+ res.json({ ok: true });
 });
 
-// ===== Photos API (main gallery) =====
-app.get('/api/photos', (req, res) => {
-  res.json(readJSON('photos.json'));
+app.get('/api/photos', async (req, res) => {
+ const { data } = await supabase.from('photos').select('*').order('created_at', { ascending: true });
+ const result = {};
+ (data || []).forEach(r => {
+ if (!result[r.category]) result[r.category] = [];
+ result[r.category].push({ url: r.url, uploader: r.uploader, message: r.message, time: r.created_at });
+ });
+ res.json(result);
 });
-app.post('/api/photos', upload.single('photo'), (req, res) => {
-  const data = readJSON('photos.json');
-  const key = req.body.key || 'default';
-  if (!data[key]) data[key] = [];
-  const url = '/uploads/' + req.file.filename;
-  data[key].push({ url, time: new Date().toISOString() });
-  writeJSON('photos.json', data);
-  res.json({ ok: true, url });
+app.post('/api/photos', upload.single('photo'), async (req, res) => {
+ const url = await uploadToStorage(req.file);
+ const category = req.body.key || 'default';
+ await supabase.from('photos').insert({ category, url });
+ res.json({ ok: true, url });
 });
-app.delete('/api/photos/:key/:index', (req, res) => {
-  const data = readJSON('photos.json');
-  const { key, index } = req.params;
-  if (data[key]) { data[key].splice(parseInt(index), 1); writeJSON('photos.json', data); }
-  res.json({ ok: true });
-});
-
-// ===== Pending (friend uploads) API =====
-app.get('/api/pending', (req, res) => {
-  res.json(readJSON('pending.json'));
-});
-app.post('/api/pending', upload.single('photo'), (req, res) => {
-  const list = readJSON('pending.json');
-  const type = req.query.type || 'covers';
-  const url = req.file ? '/uploads/' + req.file.filename : null;
-  const item = { id: Date.now(), name: req.body.name, age: req.body.age, message: req.body.message, content: req.body.content, type: req.body.type || 'blessing', photo: url, time: new Date().toISOString() };
-  list.push(item);
-  writeJSON('pending.json', list);
-  res.json({ ok: true });
-});
-app.post('/api/pending/approve/:id', (req, res) => {
-  let list = readJSON('pending.json');
-  const item = list.find(p => p.id == req.params.id);
-  if (item) {
-    if (item.type === 'year-content' && item.age) {
-      const yd = readYearData(item.age);
-      if (item.photo) yd.photos.push({ url: item.photo, uploader: item.name, time: item.time });
-      if (item.content) yd.stories.push({ id: Date.now(), name: item.name, content: item.content, time: item.time });
-      writeYearData(item.age, yd);
-    } else if (item.type === 'blessing') {
-      const bl = readJSON('blessings.json');
-      bl.push({ id: Date.now(), name: item.name, message: item.message || item.content, time: item.time });
-      writeJSON('blessings.json', bl);
-    } else if (item.photo) {
-      const photos = readJSON('photos.json');
-      const key = item.age ? 'age' + item.age : 'misc';
-      if (!photos[key]) photos[key] = [];
-      photos[key].push({ url: item.photo, uploader: item.name, message: item.message, time: item.time });
-      writeJSON('photos.json', photos);
-    }
-    list = list.filter(p => p.id != req.params.id);
-    writeJSON('pending.json', list);
-  }
-  res.json({ ok: true });
-});
-app.delete('/api/pending/:id', (req, res) => {
-  let list = readJSON('pending.json');
-  list = list.filter(p => p.id != req.params.id);
-  writeJSON('pending.json', list);
-  res.json({ ok: true });
+app.delete('/api/photos/:key/:index', async (req, res) => {
+ const { data } = await supabase.from('photos').select('id').eq('category', req.params.key).order('created_at', { ascending: true });
+ if (data && data[parseInt(req.params.index)]) await supabase.from('photos').delete().eq('id', data[parseInt(req.params.index)].id);
+ res.json({ ok: true });
 });
 
-// ===== Year Data API =====
-app.get('/api/year/:age', (req, res) => {
-  res.json(readYearData(req.params.age));
+app.get('/api/pending', async (req, res) => {
+ const { data } = await supabase.from('pending').select('*').order('created_at', { ascending: true });
+ res.json((data || []).map(r => ({ id: r.id, name: r.name, age: r.age, message: r.message, content: r.content, type: r.type, photo: r.photo_url, time: r.created_at })));
 });
-app.post('/api/year/:age/story', (req, res) => {
-  const { name, content } = req.body;
-  if (!name || !content) return res.status(400).json({ error: 'name and content required' });
-  const data = readYearData(req.params.age);
-  data.stories.push({ id: Date.now(), name, content, time: new Date().toISOString() });
-  writeYearData(req.params.age, data);
-  res.json({ ok: true });
+app.post('/api/pending', upload.single('photo'), async (req, res) => {
+ let photoUrl = null;
+ if (req.file) photoUrl = await uploadToStorage(req.file);
+ await supabase.from('pending').insert({ name: req.body.name, age: req.body.age, message: req.body.message, content: req.body.content, type: req.body.type || 'blessing', photo_url: photoUrl });
+ res.json({ ok: true });
 });
-app.post('/api/year/:age/comment', (req, res) => {
-  const { name, content } = req.body;
-  if (!name || !content) return res.status(400).json({ error: 'name and content required' });
-  const data = readYearData(req.params.age);
-  if (!data.comments) data.comments = [];
-  data.comments.push({ id: Date.now(), name, content, time: new Date().toISOString() });
-  writeYearData(req.params.age, data);
-  res.json({ ok: true });
+app.post('/api/pending/approve/:id', async (req, res) => {
+ const { data: item } = await supabase.from('pending').select('*').eq('id', req.params.id).single();
+ if (!item) return res.json({ ok: false, error: 'not found' });
+ if (item.type === 'year-content' && item.age) {
+ if (item.photo_url) await supabase.from('year_photos').insert({ age: parseInt(item.age), url: item.photo_url, uploader: item.name });
+ if (item.content) await supabase.from('year_stories').insert({ age: parseInt(item.age), name: item.name, content: item.content });
+ } else if (item.type === 'blessing') {
+ await supabase.from('blessings').insert({ name: item.name, message: item.message || item.content });
+ } else if (item.photo_url) {
+ const cat = item.age ? 'age' + item.age : 'misc';
+ await supabase.from('photos').insert({ category: cat, url: item.photo_url, uploader: item.name, message: item.message });
+ }
+ await supabase.from('pending').delete().eq('id', req.params.id);
+ res.json({ ok: true });
 });
-app.post('/api/year/:age/cover', upload.single('cover'), (req, res) => {
-  const data = readYearData(req.params.age);
-  const url = '/uploads/' + req.file.filename;
-  data.cover = url;
-  writeYearData(req.params.age, data);
-  res.json({ ok: true, url });
-});
-app.post('/api/year/:age/photo', upload.single('photo'), (req, res) => {
-  const data = readYearData(req.params.age);
-  const url = '/uploads/' + req.file.filename;
-  data.photos.push({ url, time: new Date().toISOString() });
-  writeYearData(req.params.age, data);
-  res.json({ ok: true, url });
-});
-app.delete('/api/year/:age/photo/:index', (req, res) => {
-  const data = readYearData(req.params.age);
-  if (data.photos) { data.photos.splice(parseInt(req.params.index), 1); writeYearData(req.params.age, data); }
-  res.json({ ok: true });
-});
-app.delete('/api/year/:age/story/:storyId', (req, res) => {
-  const data = readYearData(req.params.age);
-  if (data.stories) {
-    data.stories = data.stories.filter(s => s.id != req.params.storyId);
-    writeYearData(req.params.age, data);
-  }
-  res.json({ ok: true });
-});
-app.delete('/api/year/:age/cover', (req, res) => {
-  const data = readYearData(req.params.age);
-  data.cover = null;
-  writeYearData(req.params.age, data);
-  res.json({ ok: true });
+app.delete('/api/pending/:id', async (req, res) => {
+ await supabase.from('pending').delete().eq('id', req.params.id);
+ res.json({ ok: true });
 });
 
-// ===== Pet Photos API =====
-app.get('/api/pets', (req, res) => {
-  res.json(readPetData());
+app.get('/api/year/:age', async (req, res) => {
+ const age = parseInt(req.params.age);
+ const [cover, photos, stories, comments] = await Promise.all([
+ supabase.from('year_covers').select('url').eq('age', age).single().then(r => r.data?.url || null).catch(() => null),
+ supabase.from('year_photos').select('url, created_at').eq('age', age).order('created_at', { ascending: true }).then(r => (r.data||[]).map(p => ({ url: p.url, time: p.created_at }))).catch(() => []),
+ supabase.from('year_stories').select('id, name, content, created_at').eq('age', age).order('created_at', { ascending: true }).then(r => (r.data||[]).map(s => ({ id: s.id, name: s.name, content: s.content, time: s.created_at }))).catch(() => []),
+ supabase.from('year_comments').select('id, name, content, created_at').eq('age', age).order('created_at', { ascending: true }).then(r => (r.data||[]).map(c => ({ id: c.id, name: c.name, content: c.content, time: c.created_at }))).catch(() => [])
+ ]);
+ res.json({ cover, photos, stories, comments });
 });
-app.post('/api/pets/:id', upload.single('photo'), (req, res) => {
-  const data = readPetData();
-  const url = '/uploads/' + req.file.filename;
-  data[req.params.id] = { url, time: new Date().toISOString() };
-  writePetData(data);
-  res.json({ ok: true, url });
+app.post('/api/year/:age/cover', upload.single('cover'), async (req, res) => {
+ const url = await uploadToStorage(req.file);
+ await supabase.from('year_covers').upsert({ age: parseInt(req.params.age), url }, { onConflict: 'age' });
+ res.json({ ok: true, url });
 });
-
-// ===== Anniversary Photos API =====
-function readAnniData() {
-  try { return JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'anniversary', 'photos.json'), 'utf8')); }
-  catch { return {}; }
-}
-function writeAnniData(data) {
-  const dir = path.join(DATA_DIR, 'anniversary');
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, 'photos.json'), JSON.stringify(data, null, 2), 'utf8');
-}
-app.get('/api/anniversary', (req, res) => res.json(readAnniData()));
-app.post('/api/anniversary/:key', upload.single('photo'), (req, res) => {
-  const data = readAnniData();
-  if (!data[req.params.key]) data[req.params.key] = [];
-  const url = '/uploads/' + req.file.filename;
-  data[req.params.key].push({ url, time: new Date().toISOString() });
-  writeAnniData(data);
-  res.json({ ok: true, url });
+app.post('/api/year/:age/photo', upload.single('photo'), async (req, res) => {
+ const url = await uploadToStorage(req.file);
+ await supabase.from('year_photos').insert({ age: parseInt(req.params.age), url });
+ res.json({ ok: true, url });
 });
-app.delete('/api/anniversary/:key/:index', (req, res) => {
-  const data = readAnniData();
-  if (data[req.params.key]) { data[req.params.key].splice(parseInt(req.params.index), 1); writeAnniData(data); }
-  res.json({ ok: true });
+app.post('/api/year/:age/story', async (req, res) => {
+ const { name, content } = req.body;
+ if (!name || !content) return res.status(400).json({ error: 'name and content required' });
+ await supabase.from('year_stories').insert({ age: parseInt(req.params.age), name, content });
+ res.json({ ok: true });
 });
-
-// ===== Album (all photos aggregated) =====
-app.get('/api/album', (req, res) => {
-  const cat = req.query.cat;
-  const photos = [];
-  const main = readJSON('photos.json');
-  Object.keys(main).forEach(k => { (main[k] || []).forEach(p => photos.push({ ...p, cat: k.startsWith('age') ? 'age' : 'misc', key: k })); });
-  const ann = readAnniData();
-  Object.keys(ann).forEach(k => { (ann[k] || []).forEach(p => photos.push({ ...p, cat: 'anniversary', key: k })); });
-  for (let i = 1; i <= 30; i++) { const yd = readYearData(i); (yd.photos || []).forEach(p => photos.push({ ...p, cat: 'age', key: 'age' + i })); }
-  const pd = readPetData();
-  Object.keys(pd).forEach(k => { if (pd[k] && pd[k].url) photos.push({ ...pd[k], cat: 'pet', key: k }); });
-  photos.sort((a, b) => new Date(b.time) - new Date(a.time));
-  res.json(cat && cat !== 'all' ? photos.filter(p => p.cat === cat) : photos);
+app.post('/api/year/:age/comment', async (req, res) => {
+ const { name, content } = req.body;
+ if (!name || !content) return res.status(400).json({ error: 'name and content required' });
+ await supabase.from('year_comments').insert({ age: parseInt(req.params.age), name, content });
+ res.json({ ok: true });
 });
-
-// ===== Static files =====
-app.use(express.static(path.join(__dirname, 'public'), {
-  setHeaders: (res) => {
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-  }
-}));
-
-// SPA fallback for year.html
-app.get('/year/:age', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'year.html'));
-});
-
-// Health check for Render
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', uptime: process.uptime() });
-});
-
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-});
+app.delete('/api/year/:age/photo/:index', async (req, res) => {
+ const { data } = await supabase.from('year_photos').select('id').eq('age', parseInt(req.params.age)).order('created_at', { as
+...(truncated)...
