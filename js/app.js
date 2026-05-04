@@ -114,6 +114,13 @@ function renderAnniversary() {
       card.onclick=function(){openAnniversaryDetail(item.key,item.label);};
       c.appendChild(card);
     });
+  }).catch(function(){
+    anniversaryList.forEach(function(item){
+      var card=document.createElement('div');
+      card.className='anni-card';
+      card.innerHTML='<div class="anni-card-photo"><div class="anni-placeholder">📷</div></div><div class="anni-card-body"><p class="anni-label">'+item.label+'</p><p class="anni-date">'+item.date+'</p><p class="anni-sub">'+item.sub+'</p></div>';
+      c.appendChild(card);
+    });
   });
 }
 
@@ -166,6 +173,15 @@ function renderPets() {
       html+='</div>';
       c.innerHTML+=html;
     });
+  }).catch(function(){
+    petList.forEach(function(group){
+      var html='<p class="pets-group-title">'+group.group+'</p><div class="pets-grid">';
+      group.pets.forEach(function(pet){
+        html+='<div class="pet-card"><div class="pet-photo"><span>'+pet.emoji+'</span></div><p class="pet-name">'+pet.name+'</p></div>';
+      });
+      html+='</div>';
+      c.innerHTML+=html;
+    });
   });
 }
 
@@ -184,6 +200,9 @@ function loadBlessings() {
     var snap=list.slice();
     startHomeDanmaku(snap);
     startBlessDanmaku(snap);
+  }).catch(function(){
+    var wall=document.getElementById('blessWall'); if(!wall)return;
+    wall.innerHTML='<p style="text-align:center;color:#8A8A8A;padding:20px;">暂无祝福，快来写第一条吧！</p>';
   });
 }
 
