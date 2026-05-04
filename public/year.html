@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>生日时光 · 年份详情</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@200;300;400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎂</text></svg>">
+  <style>
+    .year-hero {
+      min-height: 35vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 60px 8% 40px;
+      background: linear-gradient(160deg, var(--cream) 0%, var(--khaki) 50%, var(--pink) 100%);
+      position: relative;
+    }
+    .year-hero-age {
+      font-size: 64px;
+      font-weight: 200;
+      color: var(--dark);
+      letter-spacing: 4px;
+      line-height: 1;
+    }
+    .year-hero-label {
+      font-size: 16px;
+      font-weight: 300;
+      color: var(--gold);
+      letter-spacing: 4px;
+      margin-top: 8px;
+    }
+    .year-back {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.5);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(212,194,168,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      color: var(--dark);
+      font-size: 18px;
+    }
+    .year-section {
+      padding: 40px 8%;
+    }
+    .year-section-title {
+      font-size: 18px;
+      font-weight: 300;
+      color: var(--dark);
+      letter-spacing: 3px;
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .year-section-title::after {
+      content: '';
+      display: block;
+      width: 30px;
+      height: 1px;
+      background: var(--gold);
+      margin: 10px auto 0;
+    }
+    .year-photos-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+    .year-photos-grid .photo-item {
+      aspect-ratio: 1;
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: var(--khaki);
+      cursor: pointer;
+    }
+    .year-photos-grid .photo-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .year-upload-area {
+      margin-top: 16px;
+    }
+    .year-stories {
+      margin-top: 16px;
+    }
+    .story-card {
+      background: rgba(255,255,255,0.4);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(212,194,168,0.1);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .story-author {
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--dark);
+      margin-bottom: 4px;
+    }
+    .story-time {
+      font-size: 11px;
+      font-weight: 300;
+      color: rgba(58,58,58,0.4);
+      margin-bottom: 8px;
+    }
+    .story-content {
+      font-size: 14px;
+      font-weight: 300;
+      color: var(--dark-light);
+      line-height: 1.75;
+    }
+    .year-form {
+      display: flex;
+      flex-direction: column;
+    }
+    .year-form .input-field {
+      margin-bottom: 12px;
+    }
+    .upload-drop-mini {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 80px;
+      background: rgba(212,194,168,0.06);
+      border: 1px dashed rgba(212,194,168,0.3);
+      border-radius: var(--radius);
+      cursor: pointer;
+      margin-bottom: 12px;
+      font-size: 13px;
+      font-weight: 300;
+      color: var(--gold);
+      letter-spacing: 1px;
+    }
+    .upload-drop-mini input { display: none; }
+  </style>
+</head>
+<body>
+
+<canvas id="particleCanvas"></canvas>
+
+<!-- Hero -->
+<section class="year-hero">
+  <a class="year-back" href="/">←</a>
+  <p class="year-hero-age" id="heroAge"></p>
+  <p class="year-hero-label" id="heroLabel"></p>
+</section>
+
+<!-- 照片区 -->
+<section class="year-section">
+  <h2 class="year-section-title">这年的照片</h2>
+  <div class="year-photos-grid" id="yearPhotos">
+    <div style="grid-column:1/-1;text-align:center;padding:40px 0;font-size:13px;color:var(--dark-light);font-weight:300;">暂无照片，快来上传吧</div>
+  </div>
+  <div class="year-upload-area">
+    <label class="upload-label">
+      <input type="file" id="yearPhotoInput" accept="image/*" onchange="uploadYearPhoto(this)">
+      <span class="btn-upload">+ 上传这年的照片</span>
+    </label>
+  </div>
+</section>
+
+<!-- 故事/回忆区 -->
+<section class="year-section" style="background: var(--khaki);">
+  <h2 class="year-section-title">这年的故事</h2>
+  <div class="year-stories" id="yearStories">
+    <p style="text-align:center;font-size:13px;color:var(--dark-light);font-weight:300;padding:20px 0;">还没有故事，来写第一个吧</p>
+  </div>
+  <form class="year-form" onsubmit="return submitStory(event)">
+    <input class="input-field" id="storyAuthor" placeholder="你的昵称" maxlength="20">
+    <textarea class="input-field input-ta" id="storyContent" placeholder="写下这年的回忆…" rows="3" maxlength="1000"></textarea>
+    <button type="submit" class="btn-submit">发布故事</button>
+  </form>
+</section>
+
+<!-- 页脚 -->
+<footer class="site-footer">
+  <p class="footer-quote">岁岁年年，万喜万般宜</p>
+  <p class="footer-note">永久存档 · 持续更新</p>
+  <a class="footer-admin" href="/">返回首页</a>
+</footer>
+
+<div class="lightbox" id="lightbox" onclick="if(event.target===this)this.classList.remove('open')">
+  <button class="lightbox-close" onclick="document.getElementById('lightbox').classList.remove('open')">✕</button>
+  <img id="lightboxImg">
+</div>
+
+<script>
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  var age = parseInt(params.get('age')) || 1;
+  document.title = age + '岁 · 生日时光';
+
+  var heroAge = document.getElementById('heroAge');
+  var heroLabel = document.getElementById('heroLabel');
+  if (heroAge) heroAge.textContent = age;
+  if (heroLabel) heroLabel.textContent = age + '岁的你';
+
+  // 加载照片
+  fetch('/api/year/' + age + '/photos')
+    .then(function(r) { return r.json(); })
+    .then(function(photos) {
+      var grid = document.getElementById('yearPhotos');
+      if (!photos.length) return;
+      grid.innerHTML = '';
+      photos.forEach(function(p) {
+        var div = document.createElement('div');
+        div.className = 'photo-item';
+        div.innerHTML = '<img src="' + esc(p.url) + '" loading="lazy">';
+        div.onclick = function() { openLB(p.url); };
+        grid.appendChild(div);
+      });
+    })
+    .catch(function() {});
+
+  // 加载故事
+  fetch('/api/year/' + age + '/stories')
+    .then(function(r) { return r.json(); })
+    .then(function(stories) {
+      var el = document.getElementById('yearStories');
+      if (!stories.length) return;
+      el.innerHTML = '';
+      stories.forEach(function(s) {
+        var card = document.createElement('div');
+        card.className = 'story-card';
+        card.innerHTML =
+          '<p class="story-author">' + esc(s.author) + '</p>' +
+          '<p class="story-time">' + fmtTime(s.time) + '</p>' +
+          '<p class="story-content">' + esc(s.content) + '</p>';
+        el.appendChild(card);
+      });
+    })
+    .catch(function() {});
+
+  // 上传照片
+  window.uploadYearPhoto = function(input) {
+    if (!input.files || !input.files[0]) return;
+    var form = new FormData();
+    form.append('photo', input.files[0]);
+    form.append('author', '匿名');
+    fetch('/api/year/' + age + '/photos', { method: 'POST', body: form })
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        if (res.ok) {
+          showToast('照片已上传');
+          setTimeout(function() { location.reload(); }, 800);
+        } else {
+          showToast(res.error || '上传失败');
+        }
+      })
+      .catch(function() { showToast('网络错误'); });
+    input.value = '';
+  };
+
+  // 发布故事
+  window.submitStory = function(e) {
+    e.preventDefault();
+    var author = document.getElementById('storyAuthor').value.trim();
+    var content = document.getElementById('storyContent').value.trim();
+    if (!content) { showToast('请写下回忆内容'); return false; }
+    fetch('/api/year/' + age + '/stories', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ author: author || '匿名', content: content }),
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        if (res.ok) {
+          showToast('故事已发布');
+          setTimeout(function() { location.reload(); }, 800);
+        } else {
+          showToast(res.error || '发布失败');
+        }
+      })
+      .catch(function() { showToast('网络错误'); });
+    return false;
+  };
+
+  function openLB(url) {
+    var lb = document.getElementById('lightbox');
+    var img = document.getElementById('lightboxImg');
+    img.src = url;
+    lb.classList.add('open');
+  }
+
+  function esc(s) {
+    if (!s) return '';
+    var d = document.createElement('div');
+    d.appendChild(document.createTextNode(s));
+    return d.innerHTML;
+  }
+
+  function fmtTime(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    return (d.getMonth()+1) + '/' + d.getDate() + ' ' +
+      (d.getHours()<10?'0':'') + d.getHours() + ':' + (d.getMinutes()<10?'0':'') + d.getMinutes();
+  }
+
+  function showToast(msg) {
+    var t = document.getElementById('toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = 'toast';
+      t.className = 'toast';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(function() { t.classList.remove('show'); }, 2500);
+  }
+
+  // 粒子
+  var canvas = document.getElementById('particleCanvas');
+  if (canvas) {
+    var ctx = canvas.getContext('2d');
+    var particles = [];
+    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    resize();
+    window.addEventListener('resize', resize);
+    for (var i = 0; i < 25; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: Math.random() * 2 + 0.5,
+        dx: (Math.random() - 0.5) * 0.3,
+        dy: -Math.random() * 0.3 - 0.1,
+        o: Math.random() * 0.3 + 0.1,
+      });
+    }
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (var i = 0; i < particles.length; i++) {
+        var p = particles[i];
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(212,194,168,' + p.o + ')';
+        ctx.fill();
+        p.x += p.dx; p.y += p.dy;
+        if (p.y < -10) { p.y = canvas.height + 10; p.x = Math.random() * canvas.width; }
+        if (p.x < -10) p.x = canvas.width + 10;
+        if (p.x > canvas.width + 10) p.x = -10;
+      }
+      requestAnimationFrame(draw);
+    }
+    draw();
+  }
+})();
+</script>
+</body>
+</html>
