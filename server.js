@@ -53,6 +53,11 @@ app.use((err, req, res, next) => {
 
 // Data helpers
 const DATA_DIR = path.join(__dirname, 'data');
+// Ensure data directories exist on startup
+['.', 'years', 'pets', 'anniversary'].forEach(sub => {
+  const dir = path.join(DATA_DIR, sub);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+});
 function readJSON(file) {
   const fp = path.join(DATA_DIR, file);
   try { return JSON.parse(fs.readFileSync(fp, 'utf8')); }
@@ -285,6 +290,11 @@ app.use(express.static(path.join(__dirname, 'public'), {
 // SPA fallback for year.html
 app.get('/year/:age', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'year.html'));
+});
+
+// Health check for Render
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', uptime: process.uptime() });
 });
 
 app.listen(PORT, () => {
