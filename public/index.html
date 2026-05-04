@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Happy Birthday · 时光纪念册</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@200;300;400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css?v=12">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎂</text></svg>">
+</head>
+<body>
+
+<canvas id="particleCanvas"></canvas>
+
+<!-- ========== 板块1：全屏开场首屏 ========== -->
+<section id="secOpening" class="sec-opening">
+  <div class="open-content">
+    <p class="open-eyebrow">致我的女孩</p>
+    <h1 class="open-title" id="openTitle"></h1>
+    <div class="open-counter">
+      <span>你已经来到这个世界</span>
+      <div class="open-counter-nums">
+        <span id="ocDays">0</span>天
+        <span id="ocHours">0</span>小时
+        <span id="ocMins">0</span>分
+        <span id="ocSecs">0</span>秒
+      </div>
+    </div>
+    <button class="btn-enter" onclick="openAlbum()">开启时光纪念册</button>
+  </div>
+  <div class="open-top-btns">
+    <button class="btn-danmaku-toggle" id="homeDanmakuToggle" onclick="toggleHomeDanmaku()">弹幕</button>
+    <button class="btn-music" id="btnMusic" onclick="toggleMusic()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+    </button>
+  </div>
+</section>
+
+<!-- 首页弹幕浮层 -->
+<div class="danmaku-bar-home" id="homeDanmakuBar"></div>
+
+<!-- ========== 板块2：我们的时光轨迹 ========== -->
+<section id="secAnniversary" class="sec-default">
+  <div class="sec-inner">
+    <h2 class="sec-title">我们的时光轨迹</h2>
+    <div class="anni-scroll" id="anniScroll"></div>
+  </div>
+</section>
+
+<!-- ========== 板块3：当年生日主场 ========== -->
+<section id="secCurrent" class="sec-default sec-current-hero">
+  <div class="sec-inner">
+    <h2 class="sec-title" id="currentTitle">26岁 · 限定美好</h2>
+    <div class="current-countdown" id="currentCountdown"></div>
+    <div class="current-msg" id="currentMsg">
+      <p>亲爱的，<span id="currentAgeText">26</span>岁生日快乐。</p>
+      <p>愿这一年，所有美好都如期而至。</p>
+    </div>
+    <div class="current-gallery" id="currentGallery"></div>
+    <label class="upload-label">
+      <input type="file" accept="image/*" onchange="uploadCurrentPhoto(this)">
+      <span class="btn-upload">+ 上传照片</span>
+    </label>
+    <button class="btn-goto" onclick="scrollToSection('secBlessings')">写下生日祝福 ↓</button>
+  </div>
+</section>
+
+<!-- ========== 板块4：历年生日时光馆 ========== -->
+<section id="secGallery" class="sec-default">
+  <div class="sec-inner">
+    <h2 class="sec-title">未完待续的人生图鉴</h2>
+    <div class="year-grid" id="yearGrid"></div>
+  </div>
+</section>
+
+<!-- ========== 板块5：萌宠家族 ========== -->
+<section id="secPets" class="sec-default">
+  <div class="sec-inner">
+    <h2 class="sec-title">我们的毛孩子家人</h2>
+    <div id="petsContainer"></div>
+  </div>
+</section>
+
+<!-- ========== 板块6：公共祝福墙 ========== -->
+<section id="secBlessings" class="sec-default">
+  <div class="danmaku-bar" id="danmakuBar">
+    <button class="danmaku-toggle" onclick="toggleDanmaku()">弹幕</button>
+  </div>
+  <div class="sec-inner">
+    <h2 class="sec-title">来自全世界的爱意</h2>
+    <div class="bless-form">
+      <input class="input-field" id="blessName" placeholder="你的昵称" maxlength="20">
+      <textarea class="input-field input-ta" id="blessMsg" placeholder="写下你的祝福…" rows="3" maxlength="200"></textarea>
+      <button class="btn-submit" onclick="submitBlessing()">发送祝福</button>
+    </div>
+    <div class="bless-wall" id="blessWall"></div>
+  </div>
+</section>
+
+<!-- ========== 板块7：时光补全计划 ========== -->
+<section id="secUpload" class="sec-default">
+  <div class="sec-inner">
+    <h2 class="sec-title">帮她补齐未遇见的时光</h2>
+    <p class="upload-desc">上传她早年的照片、补充过往生日的回忆</p>
+    <form class="upload-form" id="uploadForm" onsubmit="return submitFriend(event)">
+      <select class="input-field" id="uploadAge"></select>
+      <input class="input-field" id="uploadName" placeholder="你的昵称" maxlength="20">
+      <textarea class="input-field input-ta" id="uploadMsg" placeholder="补充内容 / 回忆故事" rows="3" maxlength="500"></textarea>
+      <label class="upload-drop" id="uploadDrop">
+        <input type="file" id="uploadFile" accept="image/*" onchange="previewUpload(this)">
+        <span class="upload-hint" id="uploadHint">点击选择照片</span>
+        <img class="upload-thumb hidden" id="uploadThumb">
+      </label>
+      <button type="submit" class="btn-submit">提交</button>
+    </form>
+  </div>
+</section>
+
+<!-- ========== 板块8：页脚 ========== -->
+<footer class="site-footer">
+  <p class="footer-quote">岁岁年年，万喜万般宜</p>
+  <p class="footer-note">永久存档 · 持续更新</p>
+  <a class="footer-admin" href="/admin.html">管理后台</a>
+</footer>
+
+<!-- ========== 全屏时光相册弹窗 ========== -->
+<div class="album-modal" id="albumModal">
+  <button class="album-close" onclick="closeAlbum()">✕</button>
+  <div class="album-filters" id="albumFilters">
+    <button class="album-filter active" data-cat="all" onclick="filterAlbum('all')">全部</button>
+    <button class="album-filter" data-cat="anniversary" onclick="filterAlbum('anniversary')">纪念日</button>
+    <button class="album-filter" data-cat="age" onclick="filterAlbum('age')">生日</button>
+    <button class="album-filter" data-cat="pet" onclick="filterAlbum('pet')">宠物</button>
+  </div>
+  <button class="album-arrow album-prev" onclick="albumPrev()">‹</button>
+  <div class="album-stage" id="albumStage"></div>
+  <button class="album-arrow album-next" onclick="albumNext()">›</button>
+  <div class="album-counter" id="albumCounter">1 / 1</div>
+</div>
+
+<!-- ========== 年龄详情弹窗 ========== -->
+<div class="year-modal" id="yearModal">
+  <div class="year-modal-inner">
+    <button class="year-modal-close" onclick="closeYearModal()">✕</button>
+    <h2 class="year-modal-title" id="yearModalTitle"></h2>
+    <div class="year-modal-carousel" id="yearModalCarousel"></div>
+    <div class="year-modal-stories" id="yearModalStories"></div>
+    <div class="year-modal-comments" id="yearModalComments"></div>
+    <form class="year-modal-form" onsubmit="return submitYearComment(event)">
+      <h3 class="form-subtitle">留言互动</h3>
+      <input class="input-field" id="yearCommentName" placeholder="你的昵称" maxlength="20">
+      <textarea class="input-field input-ta" id="yearCommentContent" placeholder="写下你的评论…" rows="2" maxlength="300"></textarea>
+      <button type="submit" class="btn-submit">发表评论</button>
+    </form>
+    <form class="year-modal-form" onsubmit="return submitYearStory(event)" style="margin-top:16px">
+      <h3 class="form-subtitle">写下这年的故事</h3>
+      <input class="input-field" id="yearStoryName" placeholder="你的昵称" maxlength="20">
+      <textarea class="input-field input-ta" id="yearStoryContent" placeholder="写下这年的故事…" rows="3" maxlength="500"></textarea>
+      <button type="submit" class="btn-submit">提交审核</button>
+    </form>
+  </div>
+</div>
+
+<!-- ========== 宠物详情弹窗 ========== -->
+<div class="pet-modal" id="petModal">
+  <div class="pet-modal-inner">
+    <button class="pet-modal-close" onclick="closePetModal()">✕</button>
+    <h2 class="pet-modal-title" id="petModalTitle"></h2>
+    <div class="pet-modal-photos" id="petModalPhotos"></div>
+  </div>
+</div>
+
+<!-- ========== 图片放大预览 ========== -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <img id="lightboxImg" src="" alt="">
+</div>
+
+<script src="/js/app.js?v=12"></script>
+</body>
+</html>
