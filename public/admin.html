@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>管理后台 · 时光纪念站</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@200;300;400;600&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔐</text></svg>">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    :root{--bg:#F8F6F4;--gold:#D4B996;--text:#3A3A3A;--text-light:#8A8A8A;--cream:#F2EDE8;--card:rgba(255,255,255,0.9);--radius:12px;--font:'Noto Serif SC',Georgia,serif;--shadow:rgba(0,0,0,0.06)}
+    body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.75;-webkit-font-smoothing:antialiased}
+    input,textarea,select,button{font-family:var(--font);font-size:14px}
+    button{cursor:pointer;border:none;background:none}
+    img{max-width:100%;display:block}
+    .login-screen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8%;text-align:center}
+    .login-screen h1{font-size:24px;font-weight:300;letter-spacing:3px;margin-bottom:8px}
+    .login-screen p{font-size:13px;font-weight:300;color:var(--text-light);margin-bottom:32px}
+    .login-box{width:100%;max-width:320px}
+    .login-box input{width:100%;padding:14px 16px;font-size:14px;background:var(--card);border:1px solid #E8E4E0;border-radius:var(--radius);outline:none;margin-bottom:16px;text-align:center;letter-spacing:4px;min-height:44px}
+    .login-box input:focus{border-color:var(--gold)}
+    .login-box button{width:100%;padding:14px;font-size:14px;font-weight:300;letter-spacing:3px;color:#fff;background:var(--gold);border:none;border-radius:16px;min-height:44px}
+    .login-box button:active{opacity:.85}
+    .login-error{font-size:12px;color:#c44;margin-top:8px;display:none}
+    .admin-panel{display:none;min-height:100vh;padding-bottom:40px}
+    .admin-header{position:sticky;top:0;z-index:10;background:rgba(248,246,244,0.92);backdrop-filter:blur(16px);border-bottom:1px solid rgba(212,185,150,0.15);padding:16px 8%;display:flex;align-items:center;justify-content:space-between}
+    .admin-header h1{font-size:18px;font-weight:300;letter-spacing:2px}
+    .admin-header a{font-size:13px;color:var(--gold);text-decoration:none}
+    .admin-tabs{display:flex;gap:0;border-bottom:1px solid rgba(212,185,150,0.15);padding:0 8%;overflow-x:auto;scrollbar-width:none}
+    .admin-tabs::-webkit-scrollbar{display:none}
+    .tab-btn{padding:14px 14px;font-size:13px;font-weight:300;color:var(--text-light);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;letter-spacing:1px}
+    .tab-btn.active{color:var(--text);border-bottom-color:var(--gold)}
+    .tab-content{padding:24px 8%;max-width:720px;margin:0 auto}
+    .tab-page{display:none}.tab-page.active{display:block}
+    .item-card{background:var(--card);backdrop-filter:blur(16px);border:1px solid rgba(212,185,150,0.1);border-radius:var(--radius);padding:16px;margin-bottom:12px;display:flex;gap:12px;align-items:flex-start}
+    .item-card img{width:72px;height:72px;object-fit:cover;border-radius:8px;flex-shrink:0}
+    .item-info{flex:1;min-width:0}
+    .item-name{font-size:14px;font-weight:400;margin-bottom:4px}
+    .item-meta{font-size:12px;font-weight:300;color:var(--text-light);margin-bottom:4px}
+    .item-msg{font-size:13px;font-weight:300;color:var(--text-light);line-height:1.6}
+    .item-actions{display:flex;gap:8px;margin-top:8px;flex-shrink:0;flex-wrap:wrap}
+    .btn-sm{padding:6px 14px;font-size:12px;font-weight:300;border-radius:8px;border:1px solid;cursor:pointer;min-height:36px}
+    .btn-approve{color:#2d7a3a;border-color:rgba(45,122,58,0.3);background:rgba(45,122,58,0.06)}
+    .btn-approve:active{background:rgba(45,122,58,0.15)}
+    .btn-delete{color:#a33;border-color:rgba(170,51,51,0.3);background:rgba(170,51,51,0.06)}
+    .btn-delete:active{background:rgba(170,51,51,0.15)}
+    .btn-gold{color:var(--gold);border-color:rgba(212,185,150,0.4);background:rgba(212,185,150,0.08)}
+    .btn-gold:active{background:rgba(212,185,150,0.2)}
+    .empty-hint{text-align:center;padding:40px 0;font-size:13px;font-weight:300;color:var(--text-light)}
+    .stat-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px}
+    .stat-card{flex:1;min-width:100px;background:var(--card);backdrop-filter:blur(16px);border:1px solid rgba(212,185,150,0.1);border-radius:var(--radius);padding:16px;text-align:center}
+    .stat-num{font-size:28px;font-weight:200;color:var(--text)}
+    .stat-label{font-size:12px;font-weight:300;color:var(--text-light);letter-spacing:1px}
+    .upload-form{background:var(--card);border-radius:var(--radius);padding:20px;margin-bottom:16px;border:1px solid rgba(212,185,150,0.1)}
+    .upload-form h3{font-size:15px;font-weight:400;color:var(--gold);margin-bottom:12px;letter-spacing:1px}
+    .upload-form select,.upload-form input[type=text],.upload-form textarea{width:100%;padding:10px 14px;border:1px solid #E8E4E0;border-radius:8px;background:#fff;margin-bottom:10px;outline:none;font-size:14px}
+    .upload-form select:focus,.upload-form input:focus,.upload-form textarea:focus{border-color:var(--gold)}
+    .upload-form textarea{resize:vertical;min-height:60px}
+    .upload-form label{display:inline-block;padding:8px 18px;border:1px dashed var(--gold);border-radius:8px;color:var(--gold);font-size:13px;cursor:pointer;margin-bottom:10px}
+    .upload-form label input{display:none}
+    .upload-form .btn-submit{display:block;width:100%;padding:12px;background:var(--gold);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:400;letter-spacing:2px;min-height:44px}
+    .section-title{font-size:16px;font-weight:300;color:var(--text);margin:24px 0 16px;letter-spacing:1px}
+    .year-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+    .year-grid-item{background:var(--card);border:1px solid rgba(212,185,150,0.1);border-radius:8px;padding:12px;text-align:center;cursor:pointer;transition:all 0.2s}
+    .year-grid-item:active{transform:scale(0.97)}
+    .year-grid-item .yg-num{font-size:20px;font-weight:200}
+    .year-grid-item .yg-cover{width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;margin-top:6px}
+    @media(max-width:430px){
+      .admin-tabs{padding:0 4%}
+      .tab-content{padding:16px 4%}
+      .stat-row{gap:8px}
+      .stat-card{min-width:80px;padding:12px}
+      .stat-num{font-size:22px}
+      .year-grid{grid-template-columns:repeat(3,1fr)}
+      .item-card{flex-direction:column}
+      .item-card img{width:100%;height:120px}
+    }
+  </style>
+</head>
+<body>
+
+<div class="login-screen" id="loginScreen">
+  <h1>管理后台</h1>
+  <p>请输入管理员密码</p>
+  <div class="login-box">
+    <input type="password" id="pwdInput" placeholder="密码" onkeydown="if(event.key==='Enter')doLogin()">
+    <button onclick="doLogin()">进入后台</button>
+    <p class="login-error" id="loginError">密码错误</p>
+  </div>
+</div>
+
+<div class="admin-panel" id="adminPanel">
+  <div class="admin-header">
+    <h1>🎂 管理后台</h1>
+    <a href="/">← 返回首页</a>
+  </div>
+  <div class="admin-tabs" id="tabsBar">
+    <button class="tab-btn active" onclick="switchTab('overview',this)">总览</button>
+    <button class="tab-btn" onclick="switchTab('pending',this)">待审核</button>
+    <button class="tab-btn" onclick="switchTab('blessings',this)">祝福</button>
+    <button class="tab-btn" onclick="switchTab('photos',this)">照片</button>
+    <button class="tab-btn" onclick="switchTab('years',this)">年龄</button>
+    <button class="tab-btn" onclick="switchTab('anni',this)">纪念日</button>
+    <button class="tab-btn" onclick="switchTab('pets',this)">宠物</button>
+    <button class="tab-btn" onclick="switchTab('imgmgmt',this)">图片管理</button>
+  </div>
+  <div class="tab-content">
+
+    <!-- 总览 -->
+    <div class="tab-page active" id="tab-overview">
+      <div class="stat-row">
+        <div class="stat-card"><div class="stat-num" id="statBlessings">0</div><div class="stat-label">祝福</div></div>
+        <div class="stat-card"><div class="stat-num" id="statPhotos">0</div><div class="stat-label">照片</div></div>
+        <div class="stat-card"><div class="stat-num" id="statPending">0</div><div class="stat-label">待审核</div></div>
+        <div class="stat-card"><div class="stat-num" id="statYears">0</div><div class="stat-label">年龄</div></div>
+      </div>
+    </div>
+
+    <!-- 待审核 -->
+    <div class="tab-page" id="tab-pending">
+      <div id="pendingList"><div class="empty-hint">加载中…</div></div>
+    </div>
+
+    <!-- 祝福管理 -->
+    <div class="tab-page" id="tab-blessings">
+      <div id="blessingsList"><div class="empty-hint">加载中…</div></div>
+    </div>
+
+    <!-- 照片管理 -->
+    <div class="tab-page" id="tab-photos">
+      <div id="photosList"><div class="empty-hint">加载中…</div></div>
+    </div>
+
+    <!-- 年龄管理 -->
+    <div class="tab-page" id="tab-years">
+      <h3 class="section-title">当前主打年龄</h3>
+      <div class="upload-form">
+        <input type="text" id="mainAgeInput" placeholder="输入年龄数字（如 26）">
+        <button class="btn-submit" onclick="updateMainAge()">保存</button>
+      </div>
+      <h3 class="section-title">年龄封面管理</h3>
+      <p style="font-size:13px;color:var(--text-light);margin-bottom:12px">点击年龄卡片上传封面图</p>
+      <div class="year-grid" id="yearGrid"></div>
+      <div id="yearDetail" style="display:none">
+        <h3 class="section-title" id="yearDetailTitle"></h3>
+        <div class="upload-form">
+          <h3>封面图</h3>
+          <div id="yearCoverPreview" style="margin-bottom:10px"></div>
+          <label>选择图片<input type="file" id="yearCoverInput" accept="image/jpeg,image/png,image/gif,image/webp" onchange="previewAndUpload(this,'yearCover')"></label>
+        </div>
+        <div class="upload-form">
+          <h3>上传照片</h3>
+          <label>选择图片<input type="file" id="yearPhotoInput" accept="image/jpeg,image/png,image/gif,image/webp" onchange="previewAndUpload(this,'yearPhoto')"></label>
+          <div id="yearPhotoPreview" style="display:none;margin-top:8px"><img style="max-width:200px;max-height:150px;object-fit:cover;border-radius:8px;"></div>
+        </div>
+        <div id="yearPhotosList"></div>
+      </div>
+    </div>
+
+    <!-- 纪念日管理 -->
+    <div class="tab-page" id="tab-anni">
+      <div id="anniList"><div class="empty-hint">加载中…</div></div>
+      <div class="upload-form" style="margin-top:20px">
+        <h3>上传纪念日照片</h3>
+        <select id="anniKeySelect">
+          <option value="anni1">初见</option>
+          <option value="anni2">相恋</option>
+          <option value="anni3">余生</option>
+        </select>
+        <label>选择图片<input type="file" id="anniPhotoInput" accept="image/jpeg,image/png,image/gif,image/webp" onchange="previewAndUpload(this,'anni')"></label>
+        <div id="anniPreview" style="display:none;margin-top:8px"><img style="max-width:200px;max-height:150px;object-fit:cover;border-radius:8px;"></div>
+      </div>
+    </div>
+
+    <!-- 宠物管理 -->
+    <div class="tab-page" id="tab-pets">
+      <div id="petsList"><div class="empty-hint">加载中…</div></div>
+      <div class="upload-form" style="margin-top:20px">
+        <h3>上传宠物照片</h3>
+        <select id="petIdSelect">
+          <option value="laifu">来福</option>
+          <option value="wangcai">旺财</option>
+          <option value="duofu">多福</option>
+          <option value="yuanbao">元宝</option>
+          <option value="zhaocai">招财</option>
+          <option value="jinbao">进宝</option>
+        </select>
+        <label>选择图片<input type="file" id="petPhotoInput" accept="image/jpeg,image/png,image/gif,image/webp" onchange="previewAndUpload(this,'pet')"></label>
+        <div id="petPreview" style="display:none;margin-top:8px"><img style="max-width:200px;max-height:150px;object-fit:cover;border-radius:8px;"></div>
+      </div>
+    </div>
+
+    <!-- 图片管理 -->
+    <div class="tab-page" id="tab-imgmgmt">
+      <h3 class="section-title">全部图片</h3>
+      <div id="imgMgmtList"><div class="empty-hint">加载中…</div></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+var ADMIN_PWD='gxy05310';
+var allBlessings=[],allPhotos={},allPending=[],allYears={},allPets={},allAnni={};
+var selectedYearAge=null;
+var BIRTH_DATE_ADMIN=new Date(2000,4,31);
+var ageList=[];
+for(var _ai=1;_ai<=(new Date().getFullYear()-2000);_ai++)ageList.push(_ai);
+
+function validateImageAdmin(file){
+  var allowed=['image/jpeg','image/png','image/gif','image/webp'];
+  if(!allowed.includes(file.type)){showToast('只支持 jpg/png/gif/webp 格式');return false;}
+  if(file.size>10*1024*1024){showToast('图片不能超过 10MB');return false;}
+  return true;
+}
+
+function previewAndUpload(input,type){
+  if(!input.files[0])return;
+  if(!validateImageAdmin(input.files[0])){input.value='';return;}
+  var file=input.files[0];
+  // 预览
+  var previewMap={yearCover:'yearCoverPreview',yearPhoto:'yearPhotoPreview',anni:'anniPreview',pet:'petPreview'};
+  var pid=previewMap[type];
+  if(pid){
+    var pel=document.getElementById(pid);
+    if(pel){
+      pel.style.display='block';
+      var img=pel.querySelector('img');
+      if(!img){img=document.createElement('img');img.style.cssText='max-width:200px;max-height:150px;object-fit:cover;border-radius:8px;';pel.appendChild(img);}
+      img.src=URL.createObjectURL(file);
+    }
+  }
+  // 上传
+  var fd=new FormData();
+  if(type==='yearCover'){
+    if(!selectedYearAge)return;
+    fd.append('cover',file);
+    fetch('/api/year/'+selectedYearAge+'/cover',{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(){showToast('封面已更新');input.value='';if(pid)document.getElementById(pid).style.display='none';selectYear(selectedYearAge);});
+  }else if(type==='yearPhoto'){
+    if(!selectedYearAge)return;
+    fd.append('photo',file);
+    fetch('/api/year/'+selectedYearAge+'/photo',{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(){showToast('照片已上传');input.value='';if(pid)document.getElementById(pid).style.display='none';selectYear(selectedYearAge);});
+  }else if(type==='anni'){
+    var key=document.getElementById('anniKeySelect').value;
+    fd.append('photo',file);
+    fetch('/api/anniversary/'+key,{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(){showToast('已上传');input.value='';if(pid)document.getElementById(pid).style.display='none';loadAll();});
+  }else if(type==='pet'){
+    var id=document.getElementById('petIdSelect').value;
+    fd.append('photo',file);
+    fetch('/api/pets/'+id,{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(){showToast('已上传');input.value='';if(pid)document.getElementById(pid).style.display='none';loadAll();});
+  }
+}
+
+function doLogin(){
+  if(document.getElementById('pwdInput').value===ADMIN_PWD){
+    document.getElementById('loginScreen').style.display='none';
+    document.getElementById('adminPanel').style.display='block';
+    loadAll();
+  }else{
+    var e=document.getElementById('loginError');e.style.display='block';
+    setTimeout(function(){e.style.display='none';},2000);
+  }
+}
+
+function switchTab(name,btn){
+  document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
+  document.querySelectorAll('.tab-page').forEach(function(p){p.classList.remove('active');});
+  btn.classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+function loadAll(){
+  Promise.all([
+    fetch('/api/blessings').then(function(r){return r.json();}),
+    fetch('/api/photos').then(function(r){return r.json();}),
+    fetch('/api/pending').then(function(r){return r.json();}),
+    fetch('/api/pets').then(function(r){return r.json();}),
+    fetch('/api/anniversary').then(function(r){return r.json();}),
+  ]).then(function(r){
+    allBlessings=r[0];allPhotos=r[1];allPending=r[2];allPets=r[3];allAnni=r[4];
+    var pc=0;Object.keys(allPhotos).forEach(function(k){pc+=allPhotos[k].length;});
+    document.getElementById('statBlessings').textContent=allBlessings.length;
+    document.getElementById('statPhotos').textContent=pc;
+    document.getElementById('statPending').textContent=allPending.length;
+    document.getElementById('statYears').textContent=ageList.length;
+    renderPending();renderBlessingsAdmin();renderPhotosAdmin();renderYearGrid();renderAnni();renderPets();renderImgMgmt();
+  });
+}
+
+// ===== 待审核 =====
+function renderPending(){
+  var el=document.getElementById('pendingList');
+  if(!allPending.length){el.innerHTML='<div class="empty-hint">暂无待审核内容</div>';return;}
+  el.innerHTML='';
+  allPending.forEach(function(p){
+    var c=document.createElement('div');c.className='item-card';
+    var img=p.photo?'<img src="'+esc(p.photo)+'">':'';
+    var typeLabel=p.type==='year-content'?(p.age?p.age+'岁故事':'故事'):'祝福';
+    c.innerHTML=img+'<div class="item-info"><div class="item-name">'+esc(p.name)+' · <span style="color:var(--gold)">'+typeLabel+'</span></div><div class="item-meta">'+fmtTime(p.time)+'</div><div class="item-msg">'+esc(p.message||p.content||'(仅图片)')+'</div></div><div class="item-actions"><button class="btn-sm btn-approve" onclick="approveItem('+p.id+')">通过</button><button class="btn-sm btn-delete" onclick="deletePending('+p.id+')">删除</button></div>';
+    el.appendChild(c);
+  });
+}
+function approveItem(id){
+  fetch('/api/pending/approve/'+id,{method:'POST'}).then(function(r){return r.json();}).then(function(res){
+    if(res.ok){showToast('已通过');loadAll();}else{showToast(res.error||'操作失败');}
+  });
+}
+function deletePending(id){
+  if(!confirm('确定删除？'))return;
+  fetch('/api/pending/'+id,{method:'DELETE'}).then(function(){showToast('已删除');loadAll();});
+}
+
+// ===== 祝福管理 =====
+function renderBlessingsAdmin(){
+  var el=document.getElementById('blessingsList');
+  if(!allBlessings.length){el.innerHTML='<div class="empty-hint">暂无祝福</div>';return;}
+  el.innerHTML='';
+  allBlessings.forEach(function(b){
+    var c=document.createElement('div');c.className='item-card';
+    c.innerHTML='<div class="item-info"><div class="item-name">'+esc(b.name)+'</div><div class="item-meta">'+fmtTime(b.time)+'</div><div class="item-msg">'+esc(b.message)+'</div></div><div class="item-actions"><button class="btn-sm btn-delete" onclick="deleteBlessing('+b.id+')">删除</button></div>';
+    el.appendChild(c);
+  });
+}
+function deleteBlessing(id){
+  if(!confirm('确定删除？'))return;
+  fetch('/api/blessings/'+id,{method:'DELETE'}).then(function(){showToast('已删除');loadAll();});
+}
+
+// ===== 照片管理 =====
+function renderPhotosAdmin(){
+  var el=document.getElementById('photosList');
+  var allP=[];
+  Object.keys(allPhotos).forEach(function(k){
+    allPhotos[k].forEach(function(p,i){allP.push(Object.assign({},p,{key:k,idx:i}));});
+  });
+  if(!allP.length){el.innerHTML='<div class="empty-hint">暂无照片</div>';return;}
+  el.innerHTML='';
+  allP.forEach(function(p){
+    var c=document.createElement('div');c.className='item-card';
+    var label=p.key.startsWith('age')?p.key.replace('age','')+'岁':'通用';
+    c.innerHTML='<img src="'+esc(p.url)+'"><div class="item-info"><div class="item-name">'+label+'</div><div class="item-meta">'+fmtTime(p.time)+'</div></div><div class="item-actions"><button class="btn-sm btn-delete" onclick="deletePhoto(\''+p.key+'\','+p.idx+')">删除</button></div>';
+    el.appendChild(c);
+  });
+}
+function deletePhoto(key,idx){
+  if(!confirm('确定删除？'))return;
+  fetch('/api/photos/'+key+'/'+idx,{method:'DELETE'}).then(function(){showToast('已删除');loadAll();});
+}
+
+// ===== 年龄管理 =====
+function renderYearGrid(){
+  var el=document.getElementById('yearGrid');el.innerHTML='';
+  ageList.forEach(function(age){
+    var item=document.createElement('div');item.className='year-grid-item';
+    item.innerHTML='<div class="yg-num">'+age+'</div>';
+    item.onclick=function(){selectYear(age);};
+    el.appendChild(item);
+  });
+  document.getElementById('mainAgeInput').value=26;
+}
+function selectYear(age){
+  selectedYearAge=age;
+  document.getElementById('yearDetail').style.display='block';
+  document.getElementById('yearDetailTitle').textContent=age+'岁管理';
+  fetch('/api/year/'+age).then(function(r){return r.json();}).then(function(data){
+    // 封面预览
+    var cp=document.getElementById('yearCoverPreview');
+    if(cp){
+      if(data.cover){cp.innerHTML='<div class="item-card"><img src="'+esc(data.cover)+'"><div class="item-info"><div class="item-name">封面图</div></div><div class="item-actions"><button class="btn-sm btn-delete" onclick="deleteYearCover('+age+')">删除封面</button></div></div>';}
+      else{cp.innerHTML='<p style="font-size:13px;color:var(--text-light)">未设置封面</p>';}
+    }
+    // 照片列表
+    var el=document.getElementById('yearPhotosList');
+    var photos=data.photos||[];
+    if(!photos.length){el.innerHTML='<p style="font-size:13px;color:var(--text-light);margin-top:12px">暂无照片</p>';return;}
+    el.innerHTML='';
+    photos.forEach(function(p,i){
+      var c=document.createElement('div');c.className='item-card';
+      c.innerHTML='<img src="'+esc(p.url)+'"><div class="item-info"><div class="item-name">照片 '+(i+1)+'</div><div class="item-meta">'+fmtTime(p.time)+'</div></div><div class="item-actions"><button class="btn-sm btn-delete" onclick="deleteYearPhoto('+age+','+i+')">删除</button></div>';
+      el.appendChild(c);
+    });
+  });
+}
+function deleteYearCover(age){
+  if(!confirm('确定删除封面图？'))return;
+  fetch('/api/year/'+age+'/cover',{method:'DELETE'}).then(function(){showToast('封面已删除');selectYear(age);loadAll();});
+}
+function deleteYearPhoto(age,idx){
+  if(!confirm('确定删除此照片？'))return;
+  fetch('/api/year/'+age+'/photo/'+idx,{method:'DELETE'}).then(function(){showToast('已删除');selectYear(age);loadAll();});
+}
+function uploadYearCover(input){previewAndUpload(input,'yearCover');}
+function uploadYearPhoto(input){previewAndUpload(input,'yearPhoto');}
+function updateMainAge(){
+  var v=document.getElementById('mainAgeInput').value.trim();
+  if(!v||isNaN(v)){showToast('请输入有效数字');return;}
+  showToast('请手动修改 app.js 中的 currentMainAge = '+v);
+}
+
+// ===== 纪念日管理 =====
+function renderAnni(){
+  var el=document.getElementById('anniList');el.innerHTML='';
+  var keys=['anni1','anni2','anni3'];
+  var names={anni1:'初见',anni2:'相恋',anni3:'余生'};
+  keys.forEach(function(k){
+    var photos=allAnni[k]||[];
+    var section=document.createElement('div');
+    section.innerHTML='<h3 class="section-title">'+names[k]+'（'+photos.length+'张）</h3>';
+    if(photos.length){
+      photos.forEach(function(p,i){
+        var c=document.createElement('div');c.className='item-card';
+        c.innerHTML='<img src="'+esc(p.url)+'"><div class="item-info"><div class="item-meta">'+fmtTime(p.time)+'</div></div><div class="item-actions"><button class="btn-sm btn-delete" onclick="deleteAnniPhoto(\''+k+'\','+i+')">删除</button></div>';
+        section.appendChild(c);
+      });
+    }else{
+      section.innerHTML+='<p style="font-size:13px;color:var(--text-light)">暂无照片</p>';
+    }
+    el.appendChild(section);
+  });
+}
+function uploadAnniPhoto(input){
+  if(!input.files[0])return;
+  if(!validateImageAdmin(input.files[0])){input.value='';return;}
+  var key=document.getElementById('anniKeySelect').value;
+  var fd=new FormData();fd.append('photo',input.files[0]);
+  fetch('/api/anniversary/'+key,{method:'POST',body:fd}).then(function(){showToast('已上传');input.value='';loadAll();});
+}
+function deleteAnniPhoto(key,idx){
+  if(!confirm('确定删除？'))return;
+  fetch('/api/anniversary/'+key+'/'+idx,{method:'DELETE'}).then(function(){showToast('已删除');loadAll();});
+}
+
+// ===== 宠物管理 =====
+function renderPets(){
+  var el=document.getElementById('petsList');el.innerHTML='';
+  var pets=[
+    {id:'laifu',name:'来福'},{id:'wangcai',name:'旺财'},{id:'duofu',name:'多福'},
+    {id:'yuanbao',name:'元宝'},{id:'zhaocai',name:'招财'},{id:'jinbao',name:'进宝'}
+  ];
+  pets.forEach(function(pet){
+    var photo=allPets[pet.id];
+    var c=document.createElement('div');c.className='item-card';
+    var img=photo?'<img src="'+esc(photo.url)+'">':'';
+    c.innerHTML=img+'<div class="item-info"><div class="item-name">'+pet.name+'</div><div class="item-meta">'+(photo?'有照片':'未上传')+'</div></div>';
+    el.appendChild(c);
+  });
+}
+function uploadPetPhoto(input){
+  if(!input.files[0])return;
+  if(!validateImageAdmin(input.files[0])){input.value='';return;}
+  var id=document.getElementById('petIdSelect').value;
+  var fd=new FormData();fd.append('photo',input.files[0]);
+  fetch('/api/pets/'+id,{method:'POST',body:fd}).then(function(){showToast('已上传');input.value='';loadAll();});
+}
+
+// ===== 图片管理 =====
+function renderImgMgmt(){
+  var el=document.getElementById('imgMgmtList');if(!el)return;
+  var allImgs=[];
+  // 年龄照片+封面
+  ageList.forEach(function(age){
+    fetch('/api/year/'+age).then(function(r){return r.json();}).then(function(data){
+      if(data.cover) allImgs.push({url:data.cover,label:age+'岁封面',type:'year-cover',age:age});
+      (data.photos||[]).forEach(function(p,i){allImgs.push({url:p.url,label:age+'岁照片'+(i+1),type:'year-photo',age:age,idx:i});});
+    });
+  });
+  // 主相册
+  Object.keys(allPhotos).forEach(function(k){
+    (allPhotos[k]||[]).forEach(function(p,i){
+      var label=k.startsWith('age')?k.replace('age','')+'岁':'通用';
+      allImgs.push({url:p.url,label:label,type:'photos',key:k,idx:i});
+    });
+  });
+  // 纪念日
+  Object.keys(allAnni).forEach(function(k){
+    (allAnni[k]||[]).forEach(function(p,i){
+      var names={anni1:'初见',anni2:'相恋',anni3:'余生'};
+      allImgs.push({url:p.url,label:names[k]||k,type:'anni',key:k,idx:i});
+    });
+  });
+  // 宠物
+  Object.keys(allPets).forEach(function(k){
+    if(allPets[k]&&allPets[k].url){
+      var petNames={laifu:'来福',wangcai:'旺财',duofu:'多福',yuanbao:'元宝',zhaocai:'招财',jinbao:'进宝'};
+      allImgs.push({url:allPets[k].url,label:petNames[k]||k,type:'pet',key:k});
+    }
+  });
+  setTimeout(function(){
+    if(!allImgs.length){el.innerHTML='<div class="empty-hint">暂无图片</div>';return;}
+    el.innerHTML='';
+    allImgs.forEach(function(img){
+      var c=document.createElement('div');c.className='item-card';
+      c.innerHTML='<img src="'+esc(img.url)+'"><div class="item-info"><div class="item-name">'+esc(img.label)+'</div></div>';
+      el.appendChild(c);
+    });
+  },500);
+}
+
+// ===== 工具函数 =====
+function esc(s){if(!s)return'';var d=document.createElement('div');d.appendChild(document.createTextNode(s));return d.innerHTML;}
+function fmtTime(iso){if(!iso)return'';var d=new Date(iso);return(d.getMonth()+1)+'/'+d.getDate()+' '+(d.getHours()<10?'0':'')+d.getHours()+':'+(d.getMinutes()<10?'0':'')+d.getMinutes();}
+function showToast(msg){
+  var t=document.getElementById('toast');
+  if(!t){t=document.createElement('div');t.id='toast';t.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(58,58,58,0.85);backdrop-filter:blur(16px);color:#fff;font-size:13px;padding:12px 24px;border-radius:16px;z-index:300;opacity:0;transition:all 0.3s;white-space:nowrap;font-family:var(--font);';document.body.appendChild(t);}
+  t.textContent=msg;t.style.opacity='1';clearTimeout(t._t);t._t=setTimeout(function(){t.style.opacity='0';},2500);
+}
+</script>
+</body>
+</html>
