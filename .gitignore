@@ -1,4 +1,9 @@
-node_modules/
-data/
+﻿node_modules/
 *.log
 .DS_Store
+
+# Runtime data (server recreates)
+data/*.json
+data/**/*.json
+public/uploads/*
+!public/uploads/.gitkeep
